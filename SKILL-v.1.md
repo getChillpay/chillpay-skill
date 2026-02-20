@@ -316,8 +316,6 @@ Requests using any other token will return a `400` error.
 ### Known Limitation — Reentrancy
 The v1 smart contracts do not include a `nonReentrant` modifier. The token whitelist above mitigates the practical risk by blocking ERC777 and non-standard tokens. Standard ERC20 tokens (USDC, USDT, WETH, DAI, WBTC) are not exploitable via this vector. A full fix with `nonReentrant` will be included in v2 with a contract redeployment.
 
-### GitHub Authentication Note
-macOS Keychain may auto-fill GitHub credentials during push operations — this is expected behavior when credentials are stored in the system keychain. The Personal Access Token generated during setup (`chillpay-github`) is stored for future use if needed.
 
 ---
 
