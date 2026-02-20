@@ -269,6 +269,35 @@ curl -X POST "https://eckmmctnjcfkzawfcwqj.supabase.co/functions/v1/escrow?actio
 
 ---
 
+## Referral Program — Token Locking
+
+chillpay has a built-in on-chain referral system in the TokenLocker contract.
+
+**How it works:**
+- When calling `lock()`, pass a referrer wallet address as `_referralAddress`
+- The reward is paid **instantly at lock time**, in the same token being locked
+- Reward = 5% of the admin fee (i.e. 5% of 1% = **0.05% of lock volume**)
+- Recorded permanently on-chain in `referralDetails`
+- Referrer and referred user cannot be the same address
+
+**Example:** Agent locks 10,000 USDC → fee = 100 USDC → referrer earns 5 USDC instantly
+
+**API usage:** Pass `referral_address` in the lock request body:
+```json
+{
+  "chain": "base",
+  "lock_tx_hash": "0x...",
+  "referral_address": "0xYOUR_REFERRER_WALLET"
+}
+```
+
+**Notes:**
+- Referral is currently available for **Token Locking only** (not Escrow)
+- Escrow referral will be added in v2
+- Reward percentage is configurable by owner (up to 50% of fee)
+
+---
+
 ## Security Model — v1
 
 ### Token Whitelist
