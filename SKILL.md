@@ -1,6 +1,6 @@
 # chillpay Skill for OpenClaw
 
-**Version:** 1.1.0  
+**Version:** 1.0.0  
 **Author:** chillpay  
 **Description:** Escrow and token locking infrastructure for AI agents on Base blockchain.
 
@@ -18,47 +18,20 @@ All operations are verified 100% on-chain via RPC. The agent only needs to submi
 
 ---
 
-## Installation
-
-### CLI (for developers and agents)
-```bash
-npm install -g chillpay
-chillpay config --key
-chillpay escrow list
-```
-
-### MCP Server (for OpenClaw agents)
-```bash
-npm install -g chillpay-mcp
-CHILLPAY_API_KEY=your_api_key chillpay-mcp
-```
-
-**OpenClaw config (`~/.openclaw/config.json`):**
-```json
-{
-  "mcpServers": {
-    "chillpay": {
-      "command": "chillpay-mcp",
-      "env": {
-        "CHILLPAY_API_KEY": "your_api_key"
-      }
-    }
-  }
-}
-```
-
----
-
 ## Base URL
+
 ```
 https://eckmmctnjcfkzawfcwqj.supabase.co/functions/v1
 ```
+
+> **Note:** This URL will migrate to `https://api.chillpay.dev/v1` once the custom domain is configured. Update your integration accordingly when v2 is released.
 
 ---
 
 ## Authentication
 
 All requests require an API key in the header:
+
 ```
 x-api-key: YOUR_API_KEY
 ```
@@ -70,6 +43,7 @@ x-api-key: YOUR_API_KEY
 ### 1. Create Escrow
 
 Lock funds in escrow pending a condition or manual release.
+
 ```
 POST /escrow?action=create
 ```
@@ -109,6 +83,7 @@ Content-Type: application/json
 ### 2. Release Escrow
 
 Release funds to the beneficiary once conditions are met.
+
 ```
 POST /escrow?action=release
 ```
@@ -132,26 +107,10 @@ POST /escrow?action=release
 
 ---
 
-### 3. Refund Escrow
-
-Refund funds back to sender if task was not completed.
-```
-POST /escrow?action=refund
-```
-
-**Body:**
-```json
-{
-  "escrow_id": "7",
-  "chain": "base"
-}
-```
-
----
-
-### 4. Lock Tokens
+### 3. Lock Tokens
 
 Lock tokens for a fixed duration (vesting, commitment, collateral).
+
 ```
 POST /lock
 ```
@@ -179,9 +138,10 @@ POST /lock
 
 ---
 
-### 5. Unlock Tokens
+### 4. Unlock Tokens
 
 Unlock tokens after the lock period has expired.
+
 ```
 POST /unlock
 ```
@@ -189,57 +149,56 @@ POST /unlock
 **Body:**
 ```json
 {
-  "unlock_tx_hash": "0x...",
+  "lock_id": "12",
   "chain": "base"
 }
 ```
 
 ---
 
-### 6. Check Status
+### 5. Check Status
 
 Query the current status of any escrow or lock.
+
 ```
-GET /status?id=7&type=escrows&chain=base
+GET /status?id=7&type=escrow&chain=base
 ```
 
 **Query params:**
 - `id` — escrow_id or lock_id
-- `type` — `escrows` or `locks`
+- `type` — `escrow` or `lock`
 - `chain` — `base` or `base-sepolia`
-
----
-
-### 7. Referral Stats
-
-Query referral earnings for a wallet.
-```
-GET /referral?wallet=0x...
-```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "wallet": "0x...",
-  "count": 3,
-  "totals_by_token": {
-    "0x833589...": 15
-  },
-  "referrals": []
+  "id": "7",
+  "type": "escrow",
+  "status": "locked",
+  "amount": "100000000",
+  "token": "0x...",
+  "chain": "base",
+  "created_at": "2026-02-19T10:00:00Z"
 }
 ```
 
 ---
 
-### 8. Generate API Key
+### 6. Generate API Key
 
 Create a new API key for an agent or integration.
+
 ```
 POST /create-api-key
 ```
 
-> **Authentication required.** Contact chillpay to obtain your first key.
+> **Authentication required.** This endpoint requires a valid `x-api-key` header — an existing key is needed to provision new ones. Agents cannot self-register without prior authorization. Contact chillpay to obtain your first key.
+
+**Headers:**
+```
+x-api-key: YOUR_EXISTING_API_KEY
+Content-Type: application/json
+```
 
 **Body:**
 ```json
@@ -248,21 +207,14 @@ POST /create-api-key
 }
 ```
 
----
-
-## MCP Tools (for OpenClaw agents)
-
-When using the MCP Server, these tools are available natively:
-
-| Tool | Description |
-|------|-------------|
-| `register_lock` | Register a token lock from a tx hash |
-| `release_lock` | Release a lock after expiry |
-| `register_escrow` | Register an escrow from a tx hash |
-| `release_escrow` | Release escrow funds to receiver |
-| `refund_escrow` | Refund escrow funds to sender |
-| `get_status` | Get status of any lock or escrow |
-| `get_referral_stats` | Get referral earnings for a wallet |
+**Response:**
+```json
+{
+  "api_key": "tl_live_...",
+  "label": "my-agent-v1",
+  "created_at": "2026-02-19T10:00:00Z"
+}
+```
 
 ---
 
@@ -279,8 +231,10 @@ When using the MCP Server, these tools are available natively:
 ---
 
 ## Usage Example — Agent-to-Human Payment
+
 ```bash
-# Step 1: Agent locks payment in escrow (transaction sent on-chain first)
+# Step 1: Human deploys a task, agent locks payment in escrow
+# (Transaction sent on-chain by agent wallet first)
 
 # Step 2: Register the escrow via API
 curl -X POST "https://eckmmctnjcfkzawfcwqj.supabase.co/functions/v1/escrow?action=create" \
@@ -317,13 +271,18 @@ curl -X POST "https://eckmmctnjcfkzawfcwqj.supabase.co/functions/v1/escrow?actio
 
 ## Referral Program — Token Locking
 
-- Reward = 5% of admin fee = **0.05% of lock volume**
-- Paid **instantly at lock time**, in the same token
-- Recorded permanently on-chain
+chillpay has a built-in on-chain referral system in the TokenLocker contract.
 
-**Example:** Lock 10,000 USDC → fee = 100 USDC → referrer earns 5 USDC instantly
+**How it works:**
+- When calling `lock()`, pass a referrer wallet address as `_referralAddress`
+- The reward is paid **instantly at lock time**, in the same token being locked
+- Reward = 5% of the admin fee (i.e. 5% of 1% = **0.05% of lock volume**)
+- Recorded permanently on-chain in `referralDetails`
+- Referrer and referred user cannot be the same address
 
-**API usage:**
+**Example:** Agent locks 10,000 USDC → fee = 100 USDC → referrer earns 5 USDC instantly
+
+**API usage:** Pass `referral_address` in the lock request body:
 ```json
 {
   "chain": "base",
@@ -332,11 +291,17 @@ curl -X POST "https://eckmmctnjcfkzawfcwqj.supabase.co/functions/v1/escrow?actio
 }
 ```
 
+**Notes:**
+- Referral is currently available for **Token Locking only** (not Escrow)
+- Escrow referral will be added in v2
+- Reward percentage is configurable by owner (up to 50% of fee)
+
 ---
 
 ## Security Model — v1
 
 ### Token Whitelist
+chillpay v1 only accepts the following verified ERC20 tokens on Base Mainnet. This is a deliberate security measure to prevent interaction with non-standard tokens (e.g. ERC777 tokens with transfer hooks):
 
 | Token | Address |
 |-------|---------|
@@ -346,15 +311,16 @@ curl -X POST "https://eckmmctnjcfkzawfcwqj.supabase.co/functions/v1/escrow?actio
 | DAI  | `0x50c5725949a6f0c72e6c4a641f24049a917db0cb` |
 | WBTC | `0x0555e30da8f98308edb960aa94c0db47230d2b9c` |
 
+Requests using any other token will return a `400` error.
+
 ### Known Limitation — Reentrancy
-v1 contracts do not include `nonReentrant`. Token whitelist mitigates practical risk. Fix included in v2 with contract redeployment.
+The v1 smart contracts do not include a `nonReentrant` modifier. The token whitelist above mitigates the practical risk by blocking ERC777 and non-standard tokens. Standard ERC20 tokens (USDC, USDT, WETH, DAI, WBTC) are not exploitable via this vector. A full fix with `nonReentrant` will be included in v2 with a contract redeployment.
+
 
 ---
 
 ## Links
 
 - **Website:** https://chillpay.dev
-- **GitHub:** https://github.com/getChillpay/chillpay-skill
-- **npm CLI:** https://www.npmjs.com/package/chillpay
-- **npm MCP:** https://www.npmjs.com/package/chillpay-mcp
-- **Base Explorer:** https://basescan.org
+- **Docs / GitHub:** https://github.com/getChillpay/chillpay-skill
+- **Base Mainnet Explorer:** https://basescan.org
